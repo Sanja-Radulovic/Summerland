@@ -59,7 +59,7 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
     glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.7f;
+    float backpackScale = 1.5f;
     PointLight pointLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 4.0f)) {}
@@ -164,12 +164,14 @@ int main() {
     // -------------------------
     Shader ourShader("resources/shaders/model.vs", "resources/shaders/model.fs");
     Shader skyShader("resources/shaders/skyShader.vs", "resources/shaders/skyShader.fs");
+    Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
 
 
     // load models
     // -----------
     Model ourModel("resources/objects/Palm/MY_PALM.obj");
-    ourModel.SetShaderTextureNamePrefix("material.");
+   // ourModel.SetShaderTextureNamePrefix("material.");
+    Model fishModel("resources/objects/Fish/12265_Fish_v1_L2.obj");
 
 
     //skybox
@@ -218,6 +220,15 @@ int main() {
             1.0f, -1.0f, 1.0f
     };
 
+    glm::vec3 fishPositions[] = {
+            glm::vec3(8.0f, -1.0f, -1.0f),
+            glm::vec3(7.0f, -2.0f, -1.0f),
+            glm::vec3(6.0f, -3.0f, -1.0f),
+            glm::vec3(5.0f, -4.0f, -1.0f),
+            glm::vec3(4.0f, -3.0f, -2.0f),
+            glm::vec3(3.0f, -2.0f, -3.0f)
+    };
+
     //sky
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -248,7 +259,7 @@ int main() {
     pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
-    pointLight.constant = 1.0f;
+    pointLight.constant = 0.0f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
@@ -297,7 +308,7 @@ int main() {
 
 
 
-        // render the loaded model
+         //render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
         model = glm::translate(model, glm::vec3(0.0f, 0.0f, -12.0f)); // translate it down so it's at the center of the scene
         model = glm::scale(model, glm::vec3(0.003f, 0.003f, 0.003f));    // it's a bit too big for our scene, so scale it down
@@ -322,6 +333,30 @@ int main() {
         glDrawArrays(GL_TRIANGLES, 0, 36);
         glBindVertexArray(0);
         glDepthFunc(GL_LESS); //set depth function back to default
+
+
+        //fish transformations
+        fishShader.use();
+        glm::mat4 projectionFish = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        glm::mat4 viewFish = programState->camera.GetViewMatrix();
+        fishShader.setMat4("projection", projectionFish);
+        fishShader.setMat4("view", viewFish);
+
+        //draw fishes
+        for(int i=0; i < 6; i++) {
+            glm::vec3 positions = fishPositions[i];
+            float x = positions[0];
+            float y = positions[1];
+            float z = positions[2];
+            model = glm::mat4(1.2f);
+            model = glm::translate(model, glm::vec3(1 / (tan(glfwGetTime() / 2)) * x * 0.5, y, z));
+            model = glm::rotate(model, glm::radians(-80.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
+
+            fishShader.setMat4("model", model);
+            fishModel.Draw(fishShader);
+        }
+
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
