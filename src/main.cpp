@@ -165,14 +165,14 @@ int main() {
     Shader ourShader("resources/shaders/model.vs", "resources/shaders/model.fs");
     Shader skyShader("resources/shaders/skyShader.vs", "resources/shaders/skyShader.fs");
     Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
-
+    Shader starShader("resources/shaders/model.vs", "resources/shaders/model.fs");
 
     // load models
     // -----------
     Model ourModel("resources/objects/Palm/MY_PALM.obj");
    // ourModel.SetShaderTextureNamePrefix("material.");
     Model fishModel("resources/objects/Fish/12265_Fish_v1_L2.obj");
-
+    Model starModel("resources/objects/1/11793_pendant_v2_L3.obj");
 
     //skybox
     float skyboxVertices[] = {
@@ -348,7 +348,7 @@ int main() {
             float x = positions[0];
             float y = positions[1];
             float z = positions[2];
-            model = glm::mat4(1.2f);
+            model = glm::mat4(1.0f);
             model = glm::translate(model, glm::vec3(1 / (tan(glfwGetTime() / 2)) * x * 0.5, y, z));
             model = glm::rotate(model, glm::radians(-80.0f), glm::vec3(1.0f, 0.0f, 0.0f));
             model = glm::scale(model, glm::vec3(0.01f, 0.01f, 0.01f));
@@ -357,6 +357,16 @@ int main() {
             fishModel.Draw(fishShader);
         }
 
+        //starfish
+        starShader.use();
+        starShader.setMat4("projection", projection);
+        starShader.setMat4("view", view);
+
+        glm::mat4 modelStar = glm::mat4(1.0f);
+        modelStar = glm::translate(modelStar, glm::vec3(-1.0f, -0.6f, -2.1f));
+        modelStar = glm::scale(modelStar, glm::vec3(0.05f, 0.05f, 0.05f));
+        starShader.setMat4("model", modelStar);
+        starModel.Draw(starShader);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
