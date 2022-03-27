@@ -169,7 +169,7 @@ int main() {
 
     // load models
     // -----------
-    Model ourModel("resources/objects/Palm/MY_PALM.obj");
+    Model ourModel("resources/objects/Boat2/11806_boat_v1_L3.obj");
    // ourModel.SetShaderTextureNamePrefix("material.");
     Model fishModel("resources/objects/Fish/12265_Fish_v1_L2.obj");
     Model starModel("resources/objects/1/11793_pendant_v2_L3.obj");
@@ -289,7 +289,7 @@ int main() {
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(0.7), 4.0f, 4.0 * sin(0.7));
+        pointLight.position = glm::vec3(4.0 * cos(0.9), 4.0f, 4.0 * sin(0.9));
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -307,13 +307,13 @@ int main() {
         ourShader.setMat4("view", view);
 
 
-
-         //render the loaded model
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, -12.0f)); // translate it down so it's at the center of the scene
-        model = glm::scale(model, glm::vec3(0.003f, 0.003f, 0.003f));    // it's a bit too big for our scene, so scale it down
+        model = glm::translate(model, glm::vec3(0.4f, 0.0f, 2.7f));
+        model = glm::rotate(model, glm::radians(94.7f),glm::vec3(-3.0f,1.1f, 1.6f));
+        model = glm::scale(model, glm::vec3(0.001f, 0.001f, 0.001f));
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
+
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
