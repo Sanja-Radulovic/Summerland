@@ -31,7 +31,7 @@ unsigned int loadCubemap(vector <std::string> faces);
 
 // settings
 const unsigned int SCR_WIDTH = 1000;
-const unsigned int SCR_HEIGHT = 800;
+const unsigned int SCR_HEIGHT = 900;
 // camera
 
 float lastX = SCR_WIDTH / 2.0f;
@@ -54,12 +54,14 @@ struct PointLight {
 };
 
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0.5f, 0.9f, 9.0f);
+    glm::vec3 clearColor = glm::vec3(0.5f, 0.9f, 0.2f);
     bool ImGuiEnabled = false;
+
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 backpackPosition = glm::vec3(0.0f);
-    float backpackScale = 1.5f;
+
+    glm::vec3 modelPosition = glm::vec3(1.0f,1.0f, 2.0f);
+    float modelScale = 3.0f;
     PointLight pointLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 4.0f)) {}
@@ -156,9 +158,74 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
+
     // configure global opengl state
     // -----------------------------
-    glEnable(GL_DEPTH_TEST);
+     glEnable(GL_DEPTH_TEST);
+     glDepthFunc(GL_LESS);
+
+     glEnable(GL_CULL_FACE);
+     glCullFace(GL_FRONT);
+
+    float cubeVertices[] = {
+            // back face
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
+            0.5f, -0.5f, -0.5f,  1.0f, 0.0f, // bottom-right
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
+            // front face
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+            0.5f,  0.5f,  0.5f,  1.0f, 1.0f, // top-right
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, // top-left
+            // left face
+            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-left
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-left
+            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-right
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+            // right face
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+            0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+            0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // bottom-right
+            0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // top-left
+            // bottom face
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+            0.5f, -0.5f, -0.5f,  1.0f, 1.0f, // top-left
+            0.5f, -0.5f,  0.5f,  1.0f, 0.0f, // bottom-left
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, // top-right
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, // bottom-right
+            // top face
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, // top-left
+            0.5f,  0.5f, -0.5f,  1.0f, 1.0f, // top-right
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+            0.5f,  0.5f,  0.5f,  1.0f, 0.0f, // bottom-right
+            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f  // top-left
+    };
+
+    // cube VAO
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
+
 
     // build and compile shaders
     // -------------------------
@@ -166,13 +233,23 @@ int main() {
     Shader skyShader("resources/shaders/skyShader.vs", "resources/shaders/skyShader.fs");
     Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
     Shader starShader("resources/shaders/model.vs", "resources/shaders/model.fs");
+    Shader stoneShader("resources/shaders/stone.vs", "resources/shaders/stone.fs");
+    Shader faceShader("resources/shaders/face_culling.vs", "resources/shaders/face_culling.fs");
+
+
+    unsigned int stoneTexture = loadTexture("resources/textures/stones_and_sand_stones_and_boulders_1445672742_big.JPG");
+    unsigned int faceTexture = loadTexture("resources/textures/jan-antonin-kolar-ICOdHM1Cuvg-unsplash.jpg");
+
+    faceShader.use();
+    faceShader.setInt("texture1", 0);
 
     // load models
     // -----------
     Model ourModel("resources/objects/Boat2/11806_boat_v1_L3.obj");
-   // ourModel.SetShaderTextureNamePrefix("material.");
     Model fishModel("resources/objects/Fish/12265_Fish_v1_L2.obj");
     Model starModel("resources/objects/1/11793_pendant_v2_L3.obj");
+
+    ourModel.SetShaderTextureNamePrefix("material.");
 
     //skybox
     float skyboxVertices[] = {
@@ -229,6 +306,8 @@ int main() {
             glm::vec3(3.0f, -2.0f, -3.0f)
     };
 
+
+
     //sky
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -236,8 +315,8 @@ int main() {
     glBindVertexArray(skyboxVAO);
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
 
 
     vector<std::string> faces
@@ -252,14 +331,83 @@ int main() {
 
     unsigned int cubemapTexture = loadCubemap(faces);
 
+    float stoneVertices[] = {
+            //positions           //normals          //texCoords
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
+
+    };
+
+
+    glm::vec3 stonePositions[] = {
+            glm::vec3(-1.0f, -5.9f, -1.0f),
+            glm::vec3(-2.4f, -6.5f, -0.5f),
+            glm::vec3(-3.4f, -5.2f, -1.2f),
+            glm::vec3(1.2f, -7.0f, -3.0f)
+    };
+
+    unsigned int stoneVBO, stoneVAO;
+    glDisable(GL_CULL_FACE);
+    glGenVertexArrays(1, &stoneVAO);
+    glGenBuffers(1, &stoneVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, stoneVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(stoneVertices), stoneVertices, GL_STATIC_DRAW );
+    glBindVertexArray(stoneVAO);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6*sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glBindVertexArray(0);
+
 
     PointLight& pointLight = programState->pointLight;
-    pointLight.position = glm::vec3(4.0f, 4.0, 0.0);
-    pointLight.ambient = glm::vec3(0.5, 0.5, 0.5);
-    pointLight.diffuse = glm::vec3(0.6, 0.6, 0.6);
+    pointLight.position = glm::vec3(4.0f, 3.0, -8.0);
+    pointLight.ambient = glm::vec3(0.9, 0.9, 0.9);
+    pointLight.diffuse = glm::vec3(0.8, 0.8, 0.6);
     pointLight.specular = glm::vec3(1.0, 1.0, 1.0);
 
-    pointLight.constant = 0.0f;
+    pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
 
@@ -287,6 +435,31 @@ int main() {
         glClearColor(0.05f, 0.4f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        faceShader.use();
+        glm::mat4 modelFace = glm::mat4(1.0f);
+        glm::mat4 viewFace = programState->camera.GetViewMatrix();
+        glm::mat4 projectionFace = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        faceShader.setMat4("view", viewFace);
+        faceShader.setMat4("projection", projectionFace);
+
+        //Render cubes
+        glCullFace(GL_FRONT);
+
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, faceTexture);
+        modelFace = glm::translate(modelFace, glm::vec3(-5.5f, -5.0f, -1.0f));
+        faceShader.setMat4("model", modelFace);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+        modelFace = glm::mat4(1.0f);
+        modelFace = glm::translate(modelFace, glm::vec3(3.5f, -8.0f, -3.0f));
+        faceShader.setMat4("model", modelFace);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+
         // don't forget to enable shader before setting uniforms
         ourShader.use();
         pointLight.position = glm::vec3(4.0 * cos(0.9), 4.0f, 4.0 * sin(0.9));
@@ -308,12 +481,29 @@ int main() {
 
 
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.4f, 0.0f, 2.7f));
+        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 1.0f));
         model = glm::rotate(model, glm::radians(94.7f),glm::vec3(-3.0f,1.1f, 1.6f));
         model = glm::scale(model, glm::vec3(0.001f, 0.001f, 0.001f));
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
+        stoneShader.use();
+        stoneShader.setMat4("projection", projection);
+        stoneShader.setMat4("view", view);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, stoneTexture);
+        glBindVertexArray(stoneVAO);
+
+
+        for (int i = 0; i < 4; i++) {
+            glm::mat4 stoneModel = glm::mat4(1.0f);
+            stoneModel = glm::translate(stoneModel,stonePositions[i]);
+            float time = glfwGetTime() * 0.1;
+            stoneModel = glm::rotate(stoneModel, time, glm::vec3(1.0f, 0.0f, 0.0f));
+            stoneShader.setMat4("model", stoneModel);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        glBindVertexArray(0);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -363,10 +553,11 @@ int main() {
         starShader.setMat4("view", view);
 
         glm::mat4 modelStar = glm::mat4(1.0f);
-        modelStar = glm::translate(modelStar, glm::vec3(-1.0f, -0.6f, -2.1f));
-        modelStar = glm::scale(modelStar, glm::vec3(0.05f, 0.05f, 0.05f));
+        modelStar = glm::translate(modelStar, glm::vec3(-0.9f, -4.0f, -6.1f));
+        modelStar = glm::scale(modelStar, glm::vec3(0.1f, 0.1f, 0.1f));
         starShader.setMat4("model", modelStar);
         starModel.Draw(starShader);
+
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -384,6 +575,9 @@ int main() {
 
     glDeleteBuffers(1, &skyboxVAO);
     glDeleteBuffers(1, &skyboxVBO);
+
+    glDeleteBuffers(1, &stoneVAO);
+    glDeleteBuffers(1, &stoneVBO);
 
     glfwTerminate();
     return 0;
@@ -450,8 +644,9 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->backpackPosition);
-        ImGui::DragFloat("Backpack scale", &programState->backpackScale, 0.05, 0.1, 4.0);
+        //promena
+        ImGui::DragFloat3("Backpack position", (float*)&programState->modelPosition);
+        ImGui::DragFloat("Backpack scale", &programState->modelScale, 0.05, 0.1, 4.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
@@ -514,5 +709,42 @@ unsigned int loadCubemap(vector <std::string> faces)
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 
+    return textureID;
+}
+unsigned int loadTexture(char const * path)
+{
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents,0);
+
+    if(data)
+    {
+        GLenum format;
+        if(nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    }
+    else
+    {
+        std::cout << "Texture failed to load at path: " << path << std::endl;
+        stbi_image_free(data);
+
+    }
     return textureID;
 }
