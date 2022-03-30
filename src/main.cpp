@@ -54,12 +54,16 @@ struct PointLight {
 };
 
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0.5f, 0.9f, 10.0f);
+    glm::vec3 clearColor = glm::vec3(0.0f, -2.0f, 15.0f);
     bool ImGuiEnabled = false;
+
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
-    glm::vec3 modelPosition = glm::vec3(1.0f, 1.0f, 2.0f);
+
+
+    glm::vec3 modelPosition = glm::vec3(0.0f,0.0f, 3.0f);
     float modelScale = 3.0f;
+
     PointLight pointLight;
     ProgramState()
             : camera(glm::vec3(0.0f, 0.0f, 4.0f)) {}
@@ -156,13 +160,36 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
 
+
     // configure global opengl state
     // -----------------------------
-    glEnable(GL_DEPTH_TEST);
-    glDepthFunc(GL_LESS);
+     glEnable(GL_DEPTH_TEST);
+     glDepthFunc(GL_LESS);
 
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_FRONT);
+     glEnable(GL_CULL_FACE);
+     glCullFace(GL_FRONT);
+
+    // build and compile shaders
+    // -------------------------
+    Shader ourShader("resources/shaders/model.vs", "resources/shaders/model.fs");
+    Shader skyShader("resources/shaders/skyShader.vs", "resources/shaders/skyShader.fs");
+    Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
+    Shader starShader("resources/shaders/model.vs", "resources/shaders/model.fs");
+    Shader stoneShader("resources/shaders/stone.vs", "resources/shaders/stone.fs");
+    Shader faceShader("resources/shaders/face_culling.vs", "resources/shaders/face_culling.fs");
+    Shader blendShader("resources/textures/blending.vs", "resources/shaders/blending.fs");
+
+
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
 
     float cubeVertices[] = {
             // back face
@@ -208,43 +235,61 @@ int main() {
             -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f  // top-left
     };
+    float stoneVertices[] = {
+            //positions           //normals          //texCoords
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
 
-    // cube VAO
-    unsigned int cubeVAO, cubeVBO;
-    glGenVertexArrays(1, &cubeVAO);
-    glGenBuffers(1, &cubeVBO);
-    glBindVertexArray(cubeVAO);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
-    glBindVertexArray(0);
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
 
 
-    // build and compile shaders
-    // -------------------------
-    Shader ourShader("resources/shaders/model.vs", "resources/shaders/model.fs");
-    Shader skyShader("resources/shaders/skyShader.vs", "resources/shaders/skyShader.fs");
-    Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
-    Shader starShader("resources/shaders/model.vs", "resources/shaders/model.fs");
-    Shader stoneShader("resources/shaders/stone.vs", "resources/shaders/stone.fs");
-    Shader faceShader("resources/shaders/face_culling.vs", "resources/shaders/face_culling.fs");
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
 
-    unsigned int stoneTexture = loadTexture("resources/textures/stones_and_sand_stones_and_boulders_1445672742_big.JPG");
-    unsigned int faceTexture = loadTexture("resources/textures/jan-antonin-kolar-ICOdHM1Cuvg-unsplash.jpg");
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
 
-    // load models
-    // -----------
-    Model ourModel("resources/objects/Boat2/11806_boat_v1_L3.obj");
-    Model fishModel("resources/objects/Fish/12265_Fish_v1_L2.obj");
-    Model starModel("resources/objects/1/11793_pendant_v2_L3.obj");
+    };
 
-    ourModel.SetShaderTextureNamePrefix("material.");
 
-    faceShader.use();
-    faceShader.setInt("texture1", 0);
+    glm::vec3 stonePositions[] = {
+            glm::vec3(-1.0f, -5.9f, -1.0f),
+            glm::vec3(-2.4f, -6.5f, -0.5f),
+            glm::vec3(-3.4f, -5.2f, -1.2f),
+            glm::vec3(1.2f, -7.0f, -3.0f)
+    };
+
 
     //skybox
     float skyboxVertices[] = {
@@ -301,60 +346,34 @@ int main() {
             glm::vec3(3.0f, -2.0f, -3.0f)
     };
 
-    float stoneVertices[] = {
-            //positions           //normals          //texCoords
-            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+    // transparent VAO
+    unsigned int transparentVAO, transparentVBO;
+    glGenVertexArrays(1, &transparentVAO);
+    glGenBuffers(1, &transparentVBO);
+    glBindVertexArray(transparentVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
 
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-
-            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-
-            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-
-            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
-            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-
-            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
-
-    };
-
-    glm::vec3 stonePositions[] = {
-            glm::vec3(-1.0f, -5.2f, -1.0f),
-            glm::vec3(-2.4f, -6.3f, -0.5f),
-            glm::vec3(-3.4f, -5.0f, -1.2f),
-            glm::vec3(1.2f, -6.8f, -3.0f)
-    };
 
     unsigned int stoneVBO, stoneVAO;
+    glGenVertexArrays(1, &stoneVAO);
+    glGenBuffers(1, &stoneVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, stoneVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(stoneVertices), stoneVertices, GL_STATIC_DRAW );
+    glBindVertexArray(stoneVAO);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6*sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glBindVertexArray(0);
+
     glDisable(GL_CULL_FACE);
     glGenVertexArrays(1, &stoneVAO);
     glGenBuffers(1, &stoneVBO);
@@ -370,16 +389,59 @@ int main() {
     glBindVertexArray(0);
 
 
+    // cube VAO
+    unsigned int cubeVAO, cubeVBO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &cubeVBO);
+    glBindVertexArray(cubeVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), &cubeVertices, GL_STATIC_DRAW);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(1);
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glBindVertexArray(0);
+
 
     //sky
     unsigned int skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
     glBindVertexArray(skyboxVAO);
+
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+
+    unsigned int stoneTexture = loadTexture("resources/textures/stones_and_sand_stones_and_boulders_1445672742_big.JPG");
+    unsigned int faceTexture = loadTexture("resources/textures/jan-antonin-kolar-ICOdHM1Cuvg-unsplash.jpg");
+    unsigned int blendTexture = loadTexture("resources/textures/algae.png");
+
+    vector<glm::vec3> vegetation
+            {
+                    glm::vec3(-9.0f, -7.0f, -4.48f),
+                    glm::vec3( -6.5f, -7.5f, 4.51f),
+                    glm::vec3( -2.6f, -5.0f, 4.7f),
+                    glm::vec3(-3.3f, -6.0f, -4.3f),
+                    glm::vec3 (-4.5f, -6.5f, -4.6f)
+            };
+
+    blendShader.use();
+    blendShader.setInt("texture1", 0);
+
+    faceShader.use();
+    faceShader.setInt("texture1", 0);
+
+    // load models
+    // -----------
+    Model ourModel("resources/objects/Boat2/11806_boat_v1_L3.obj");
+    Model fishModel("resources/objects/Fish/12265_Fish_v1_L2.obj");
+    Model starModel("resources/objects/1/11793_pendant_v2_L3.obj");
+
+    ourModel.SetShaderTextureNamePrefix("material.");
+
 
 
     vector<std::string> faces
@@ -392,10 +454,7 @@ int main() {
                     "resources/textures/sky/skyrender0005.bmp"
             };
 
-
     unsigned int cubemapTexture = loadCubemap(faces);
-
-
 
 
     PointLight& pointLight = programState->pointLight;
@@ -407,6 +466,7 @@ int main() {
     pointLight.constant = 1.0f;
     pointLight.linear = 0.09f;
     pointLight.quadratic = 0.032f;
+
 
 
     // draw in wireframe
@@ -459,6 +519,67 @@ int main() {
         ourModel.Draw(ourShader);
 
 
+        //algae
+        blendShader.use();
+        blendShader.setMat4("projection", projection);
+        blendShader.setMat4("view", view);
+
+        glBindVertexArray(transparentVAO);
+        glBindTexture(GL_TEXTURE_2D, blendTexture);
+
+
+        for (unsigned int i = 0; i < vegetation.size(); i++) {
+              model = glm::mat4(1.0f);
+              model = glm::translate(model, vegetation[i]);
+              model = glm::scale(model, glm::vec3(20.0f, 20.0f, 20.0f));
+              blendShader.setMat4("model", model);
+              glDrawArrays(GL_TRIANGLES, 0, 6);
+          }
+
+
+        faceShader.use();
+        glm::mat4 modelFace = glm::mat4(1.0f);
+        glm::mat4 viewFace = programState->camera.GetViewMatrix();
+        glm::mat4 projectionFace = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
+        faceShader.setMat4("view", viewFace);
+        faceShader.setMat4("projection", projectionFace);
+
+        //Render cubes
+        glCullFace(GL_FRONT);
+
+        glBindVertexArray(cubeVAO);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, faceTexture);
+        modelFace = glm::translate(modelFace, glm::vec3(-5.5f, -5.0f, -1.0f));
+        faceShader.setMat4("model", modelFace);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+        modelFace = glm::mat4(1.0f);
+        modelFace = glm::translate(modelFace, glm::vec3(3.5f, -8.0f, -3.0f));
+        faceShader.setMat4("model", modelFace);
+        glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
+        stoneShader.use();
+        stoneShader.setMat4("projection", projection);
+        stoneShader.setMat4("view", view);
+        glDisable(GL_CULL_FACE);
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, stoneTexture);
+        glBindVertexArray(stoneVAO);
+
+        //stone
+        for (int i = 0; i < 4; i++) {
+            glm::mat4 stoneModel = glm::mat4(1.0f);
+            stoneModel = glm::translate(stoneModel,stonePositions[i]);
+            float time = glfwGetTime() * 0.1;
+            stoneModel = glm::rotate(stoneModel, time, glm::vec3(1.0f, 0.0f, 0.0f));
+            stoneShader.setMat4("model", stoneModel);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
+        glBindVertexArray(0);
+
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
 
@@ -501,7 +622,6 @@ int main() {
             fishModel.Draw(fishShader);
         }
 
-
         //starfish
         starShader.use();
         starShader.setMat4("projection", projection);
@@ -512,50 +632,6 @@ int main() {
         modelStar = glm::scale(modelStar, glm::vec3(0.1f, 0.1f, 0.1f));
         starShader.setMat4("model", modelStar);
         starModel.Draw(starShader);
-
-        faceShader.use();
-        glm::mat4 modelFace = glm::mat4(1.0f);
-        glm::mat4 viewFace = programState->camera.GetViewMatrix();
-        glm::mat4 projectionFace = glm::perspective(glm::radians(programState->camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
-        faceShader.setMat4("view", viewFace);
-        faceShader.setMat4("projection", projectionFace);
-
-        //Render cubes
-        glCullFace(GL_FRONT);
-
-        glBindVertexArray(cubeVAO);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, faceTexture);
-
-        modelFace = glm::translate(modelFace, glm::vec3(-5.5f, -5.0f, -1.0f));
-        faceShader.setMat4("model", modelFace);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-        modelFace = glm::mat4(1.0f);
-        modelFace = glm::translate(modelFace, glm::vec3(3.5f, -8.0f, -3.0f));
-        faceShader.setMat4("model", modelFace);
-        glCullFace(GL_BACK);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
-        stoneShader.use();
-        stoneShader.setMat4("projection", projection);
-        stoneShader.setMat4("view", view);
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, stoneTexture);
-        glBindVertexArray(stoneVAO);
-
-
-        for (int i = 0; i < 4; i++) {
-            glm::mat4 stoneModel = glm::mat4(1.0f);
-            stoneModel = glm::translate(stoneModel,stonePositions[i]);
-            float time = glfwGetTime() * 0.1;
-            stoneModel = glm::rotate(stoneModel, time, glm::vec3(1.0f, 0.0f, 0.0f));
-            stoneShader.setMat4("model", stoneModel);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
-        glBindVertexArray(0);
-
 
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -572,11 +648,10 @@ int main() {
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
 
-    glDeleteVertexArrays(1, &skyboxVAO);
-    glDeleteVertexArrays(1,&cubeVAO);
-    glDeleteVertexArrays(1, &stoneVAO);
+    glDeleteBuffers(1, &skyboxVAO);
     glDeleteBuffers(1, &skyboxVBO);
-    glDeleteBuffers(1, &cubeVBO);
+
+    glDeleteBuffers(1, &stoneVAO);
     glDeleteBuffers(1, &stoneVBO);
 
     glfwTerminate();
@@ -644,6 +719,7 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
+        //promena
         ImGui::DragFloat3("Backpack position", (float*)&programState->modelPosition);
         ImGui::DragFloat("Backpack scale", &programState->modelScale, 0.05, 0.1, 4.0);
 
@@ -710,7 +786,6 @@ unsigned int loadCubemap(vector <std::string> faces)
 
     return textureID;
 }
-
 unsigned int loadTexture(char const * path)
 {
     unsigned int textureID;
