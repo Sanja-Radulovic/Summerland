@@ -54,7 +54,7 @@ struct PointLight {
 };
 
 struct ProgramState {
-    glm::vec3 clearColor = glm::vec3(0.0f, -2.0f, 15.0f);
+    glm::vec3 clearColor = glm::vec3(0.0f, -2.0f, 2.0f);
     bool ImGuiEnabled = false;
 
     Camera camera;
@@ -167,7 +167,7 @@ int main() {
      glDepthFunc(GL_LESS);
 
      glEnable(GL_CULL_FACE);
-     glCullFace(GL_FRONT);
+     glCullFace(GL_BACK);
 
     // build and compile shaders
     // -------------------------
@@ -176,21 +176,11 @@ int main() {
     Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
     Shader starShader("resources/shaders/model.vs", "resources/shaders/model.fs");
     Shader stoneShader("resources/shaders/stone.vs", "resources/shaders/stone.fs");
+    Shader algaeShader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
     Shader faceShader("resources/shaders/face_culling.vs", "resources/shaders/face_culling.fs");
-    Shader blendShader("resources/textures/blending.vs", "resources/shaders/blending.fs");
 
 
-    float transparentVertices[] = {
-            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
-            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
-            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-
-            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
-            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
-            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
-    };
-
+    glCullFace(GL_CCW);
     float cubeVertices[] = {
             // back face
             -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
@@ -235,6 +225,7 @@ int main() {
             -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, // bottom-left
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f  // top-left
     };
+
     float stoneVertices[] = {
             //positions           //normals          //texCoords
             -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
@@ -346,6 +337,17 @@ int main() {
             glm::vec3(3.0f, -2.0f, -3.0f)
     };
 
+    float transparentVertices[] = {
+            // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+            0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+            1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+            1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+    };
+
     // transparent VAO
     unsigned int transparentVAO, transparentVBO;
     glGenVertexArrays(1, &transparentVAO);
@@ -359,22 +361,8 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
 
-
+    //stone
     unsigned int stoneVBO, stoneVAO;
-    glGenVertexArrays(1, &stoneVAO);
-    glGenBuffers(1, &stoneVBO);
-    glBindBuffer(GL_ARRAY_BUFFER, stoneVBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(stoneVertices), stoneVertices, GL_STATIC_DRAW );
-    glBindVertexArray(stoneVAO);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(3*sizeof(float)));
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8*sizeof(float), (void*)(6*sizeof(float)));
-    glEnableVertexAttribArray(2);
-    glBindVertexArray(0);
-
-    glDisable(GL_CULL_FACE);
     glGenVertexArrays(1, &stoneVAO);
     glGenBuffers(1, &stoneVBO);
     glBindBuffer(GL_ARRAY_BUFFER, stoneVBO);
@@ -408,28 +396,36 @@ int main() {
     glGenVertexArrays(1, &skyboxVAO);
     glGenBuffers(1, &skyboxVBO);
     glBindVertexArray(skyboxVAO);
-
     glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
     glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
 
-    unsigned int stoneTexture = loadTexture("resources/textures/stones_and_sand_stones_and_boulders_1445672742_big.JPG");
-    unsigned int faceTexture = loadTexture("resources/textures/jan-antonin-kolar-ICOdHM1Cuvg-unsplash.jpg");
-    unsigned int blendTexture = loadTexture("resources/textures/algae.png");
+    unsigned int stoneTexture = loadTexture("resources/textures/stone.JPG");
+    unsigned int faceTexture = loadTexture("resources/textures/coral.jpg");
+    unsigned int algaeTexture = loadTexture("resources/textures/algae.png");
 
+    // transparent vegetation locations
     vector<glm::vec3> vegetation
             {
-                    glm::vec3(-9.0f, -7.0f, -4.48f),
-                    glm::vec3( -6.5f, -7.5f, 4.51f),
-                    glm::vec3( -2.6f, -5.0f, 4.7f),
-                    glm::vec3(-3.3f, -6.0f, -4.3f),
-                    glm::vec3 (-4.5f, -6.5f, -4.6f)
+                    glm::vec3(-4.5f, -6.5f, -0.5f),
+                    glm::vec3( 1.5f, -8.0f, 0.51f),
+                    glm::vec3( -3.0f, -8.0f, 0.7f),
+                    glm::vec3(-0.3f, -8.0f, -2.3f),
+                    glm::vec3 (0.5f, -8.0f, -0.6f),
+                    glm::vec3 (2.0f, -8.0f, -1.3f),
+                    glm::vec3 (-2.0f, -9.0f, -0.8f),
+                    glm::vec3 (-5.0f, -8.5f, -0.7f),
+                    glm::vec3 (-5.5f, -9.3f, 0.0f),
+                    glm::vec3 (-2.0f, -8.5f, 1.0f),
+                    glm::vec3 (-0.5f, -7.0f, 1.0f),
+                    glm::vec3 (2.5f, -8.5f, -0.6f),
+                    glm::vec3 (-5.2f, -11.5f, -0.1f)
             };
 
-    blendShader.use();
-    blendShader.setInt("texture1", 0);
+    algaeShader.use();
+    algaeShader.setInt("texture1", 0);
 
     faceShader.use();
     faceShader.setInt("texture1", 0);
@@ -441,7 +437,6 @@ int main() {
     Model starModel("resources/objects/1/11793_pendant_v2_L3.obj");
 
     ourModel.SetShaderTextureNamePrefix("material.");
-
 
 
     vector<std::string> faces
@@ -482,12 +477,10 @@ int main() {
         lastFrame = currentFrame;
 
         // input
-        // -----
          processInput(window);
 
 
         // render
-        // ------
         glClearColor(0.05f, 0.4f, 0.9f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -518,25 +511,24 @@ int main() {
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
-
-        //algae
-        blendShader.use();
-        blendShader.setMat4("projection", projection);
-        blendShader.setMat4("view", view);
-
+        algaeShader.use();
+        algaeShader.setMat4("projection", projection);
+        algaeShader.setMat4("view", view);
         glBindVertexArray(transparentVAO);
-        glBindTexture(GL_TEXTURE_2D, blendTexture);
+        glBindTexture(GL_TEXTURE_2D, algaeTexture);
+        for (unsigned int i = 0; i < vegetation.size(); i++)
+        {
+            model = glm::mat4(1.0f);
+            model = glm::translate(model, vegetation[i]);
+            model = glm::rotate(model, glm::radians(190.0f), glm::vec3(-10.8, 0.0f, 1.0f));
+            model = glm::scale(model,glm::vec3(1.0f, 1.0f, 1.0f));
+            algaeShader.setMat4("model", model);
+            glDisable(GL_CULL_FACE);
+            glDrawArrays(GL_TRIANGLES, 0, 6);
+        }
+        glEnable(GL_CULL_FACE);
 
-
-        for (unsigned int i = 0; i < vegetation.size(); i++) {
-              model = glm::mat4(1.0f);
-              model = glm::translate(model, vegetation[i]);
-              model = glm::scale(model, glm::vec3(20.0f, 20.0f, 20.0f));
-              blendShader.setMat4("model", model);
-              glDrawArrays(GL_TRIANGLES, 0, 6);
-          }
-
-
+        //face culling
         faceShader.use();
         glm::mat4 modelFace = glm::mat4(1.0f);
         glm::mat4 viewFace = programState->camera.GetViewMatrix();
@@ -545,8 +537,6 @@ int main() {
         faceShader.setMat4("projection", projectionFace);
 
         //Render cubes
-        glCullFace(GL_FRONT);
-
         glBindVertexArray(cubeVAO);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, faceTexture);
@@ -554,31 +544,31 @@ int main() {
         faceShader.setMat4("model", modelFace);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
-
         modelFace = glm::mat4(1.0f);
         modelFace = glm::translate(modelFace, glm::vec3(3.5f, -8.0f, -3.0f));
         faceShader.setMat4("model", modelFace);
         glDrawArrays(GL_TRIANGLES, 0, 36);
 
 
+        //stone
         stoneShader.use();
         stoneShader.setMat4("projection", projection);
         stoneShader.setMat4("view", view);
-        glDisable(GL_CULL_FACE);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, stoneTexture);
         glBindVertexArray(stoneVAO);
 
-        //stone
         for (int i = 0; i < 4; i++) {
             glm::mat4 stoneModel = glm::mat4(1.0f);
             stoneModel = glm::translate(stoneModel,stonePositions[i]);
             float time = glfwGetTime() * 0.1;
             stoneModel = glm::rotate(stoneModel, time, glm::vec3(1.0f, 0.0f, 0.0f));
             stoneShader.setMat4("model", stoneModel);
+            glDisable(GL_CULL_FACE);
             glDrawArrays(GL_TRIANGLES, 0, 36);
         }
         glBindVertexArray(0);
+        glEnable(GL_CULL_FACE);
 
         if (programState->ImGuiEnabled)
             DrawImGui(programState);
@@ -786,18 +776,16 @@ unsigned int loadCubemap(vector <std::string> faces)
 
     return textureID;
 }
-unsigned int loadTexture(char const * path)
-{
+
+unsigned int loadTexture(char const * path) {
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
     int width, height, nrComponents;
-    unsigned char *data = stbi_load(path, &width, &height, &nrComponents,0);
-
-    if(data)
-    {
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data) {
         GLenum format;
-        if(nrComponents == 1)
+        if (nrComponents == 1)
             format = GL_RED;
         else if (nrComponents == 3)
             format = GL_RGB;
@@ -808,18 +796,17 @@ unsigned int loadTexture(char const * path)
         glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE
+                                                                            : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
         stbi_image_free(data);
-    }
-    else
-    {
+    } else {
         std::cout << "Texture failed to load at path: " << path << std::endl;
         stbi_image_free(data);
-
     }
+
     return textureID;
 }
