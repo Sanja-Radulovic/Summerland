@@ -32,8 +32,10 @@ unsigned int loadCubemap(vector <std::string> faces);
 // settings
 const unsigned int SCR_WIDTH = 1000;
 const unsigned int SCR_HEIGHT = 900;
-// camera
+bool blinn = true;
+bool blinnKeyPressed = false;
 
+// camera
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -63,6 +65,7 @@ struct ProgramState {
 
     glm::vec3 modelPosition = glm::vec3(0.0f,0.0f, 3.0f);
     float modelScale = 3.0f;
+
 
     PointLight pointLight;
     ProgramState()
@@ -166,21 +169,25 @@ int main() {
      glEnable(GL_DEPTH_TEST);
      glDepthFunc(GL_LESS);
 
+     glEnable(GL_BLEND);
+     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
      glEnable(GL_CULL_FACE);
      glCullFace(GL_BACK);
+
 
     // build and compile shaders
     // -------------------------
     Shader ourShader("resources/shaders/model.vs", "resources/shaders/model.fs");
     Shader skyShader("resources/shaders/skyShader.vs", "resources/shaders/skyShader.fs");
     Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
-    Shader starShader("resources/shaders/model.vs", "resources/shaders/model.fs");
+    Shader starShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
     Shader stoneShader("resources/shaders/stone.vs", "resources/shaders/stone.fs");
     Shader algaeShader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
     Shader faceShader("resources/shaders/face_culling.vs", "resources/shaders/face_culling.fs");
 
 
-    glCullFace(GL_CCW);
+
     float cubeVertices[] = {
             // back face
             -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, // bottom-left
@@ -361,6 +368,7 @@ int main() {
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
     glBindVertexArray(0);
 
+
     //stone
     unsigned int stoneVBO, stoneVAO;
     glGenVertexArrays(1, &stoneVAO);
@@ -463,9 +471,10 @@ int main() {
     pointLight.quadratic = 0.032f;
 
 
-
     // draw in wireframe
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+
 
     // render loop
     // -----------
@@ -511,6 +520,7 @@ int main() {
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
+        //algae
         algaeShader.use();
         algaeShader.setMat4("projection", projection);
         algaeShader.setMat4("view", view);
@@ -597,6 +607,7 @@ int main() {
         fishShader.setMat4("projection", projectionFish);
         fishShader.setMat4("view", viewFish);
 
+
         //draw fishes
         for(int i=0; i < 6; i++) {
             glm::vec3 positions = fishPositions[i];
@@ -617,11 +628,15 @@ int main() {
         starShader.setMat4("projection", projection);
         starShader.setMat4("view", view);
 
+        starShader.setVec3("viewPos", programState->camera.Position);
+        starShader.setInt("blinn", blinn);
+
         glm::mat4 modelStar = glm::mat4(1.0f);
         modelStar = glm::translate(modelStar, glm::vec3(-0.9f, -4.0f, -6.1f));
         modelStar = glm::scale(modelStar, glm::vec3(0.1f, 0.1f, 0.1f));
         starShader.setMat4("model", modelStar);
         starModel.Draw(starShader);
+
 
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
@@ -709,7 +724,6 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        //promena
         ImGui::DragFloat3("Backpack position", (float*)&programState->modelPosition);
         ImGui::DragFloat("Backpack scale", &programState->modelScale, 0.05, 0.1, 4.0);
 
@@ -743,6 +757,18 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
         }
     }
+
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_PRESS && !blinnKeyPressed)
+    {
+        blinn = !blinn;
+        blinnKeyPressed = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_B) == GLFW_RELEASE)
+    {
+        blinnKeyPressed = false;
+    }
+
+
 }
 
 

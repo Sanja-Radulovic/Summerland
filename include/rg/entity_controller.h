@@ -5,6 +5,7 @@
 #ifndef PROJECT_BASE_ENTITY_CONTROLLER_H
 #define PROJECT_BASE_ENTITY_CONTROLLER_H
 #include<variant>
+
 struct GLFWwindow;
 
 struct Monster{
