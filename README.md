@@ -4,7 +4,7 @@ Projekat rađen za potrebe kursa računarska grafika na matematičkom fakultetu.
 Skelet projekta preuzet sa
 https://github.com/matf-racunarska-grafika/project_base.
 
-#Uputstva
+# Uputstva
 
 1. git clone https://github.com/Sanja-Radulovic/Summerland.git
 2. CLion -> Open -> path/to/my/project
@@ -15,10 +15,11 @@ https://github.com/matf-racunarska-grafika/project_base.
 7. `B` -> se ukljucuje i iskljucuje Blinn-Phong osvetljenje
 
 
-#Implementirano
+# Implementirano
 
 - Kategorija A:
     - [x] Cubemaps
 
-#Autor
+# Autor
+
 Sanja Radulovic 015/2016
