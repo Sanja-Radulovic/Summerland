@@ -62,10 +62,16 @@ struct ProgramState {
     Camera camera;
     bool CameraMouseMovementUpdateEnabled = true;
 
+    glm::vec3 boatPosition = glm::vec3(0.0f, 0.0f, 1.0f);
+    glm::vec3 starPosition = glm::vec3(-0.9f, -4.0f, -6.1f);
+    float boatScale = 0.002f;
+    float starScale = 0.1f;
+    unsigned int numOfFish = 6;
 
-    glm::vec3 modelPosition = glm::vec3(0.0f,0.0f, 3.0f);
-    float modelScale = 3.0f;
-
+    // light settings
+    glm::vec3 dirLightDir = glm::vec3(-0.2f, -1.0f, -0.3f);
+    glm::vec3 dirLightAmbDiffSpec = glm::vec3(0.3f, 0.3f,0.2f);
+    bool spotlightOn = true;
 
     PointLight pointLight;
     ProgramState()
@@ -159,6 +165,8 @@ int main() {
     ImGuiIO &io = ImGui::GetIO();
     (void) io;
 
+    ImGui::StyleColorsDark();
+
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 330 core");
@@ -166,25 +174,26 @@ int main() {
 
     // configure global opengl state
     // -----------------------------
-     glEnable(GL_DEPTH_TEST);
-     glDepthFunc(GL_LESS);
+    glEnable(GL_DEPTH_TEST);
+    glDepthFunc(GL_LESS);
 
-     glEnable(GL_BLEND);
-     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-     glEnable(GL_CULL_FACE);
-     glCullFace(GL_BACK);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
 
 
     // build and compile shaders
     // -------------------------
     Shader ourShader("resources/shaders/model.vs", "resources/shaders/model.fs");
     Shader skyShader("resources/shaders/skyShader.vs", "resources/shaders/skyShader.fs");
-    Shader fishShader("resources/shaders/model.vs", "resources/shaders/model.fs");
-    Shader starShader("resources/shaders/2.model_lighting.vs", "resources/shaders/2.model_lighting.fs");
+    Shader fishShader("resources/shaders/modelFish.vs", "resources/shaders/modelFish.fs");
+    Shader starShader("resources/shaders/modelStar.vs", "resources/shaders/modelStar.fs");
     Shader stoneShader("resources/shaders/stone.vs", "resources/shaders/stone.fs");
     Shader algaeShader("resources/shaders/blending.vs", "resources/shaders/blending.fs");
     Shader faceShader("resources/shaders/face_culling.vs", "resources/shaders/face_culling.fs");
+    Shader sunShader("resources/shaders/sun.vs", "resources/shaders/sun.fs");
 
 
 
@@ -344,6 +353,17 @@ int main() {
             glm::vec3(3.0f, -2.0f, -3.0f)
     };
 
+    float sunVertices[] = {
+            0.0f, 0.5f, 0.0f, 0.0f, 0.0f,
+            0.0f, -0.5f, 0.0f, 1.0f, 0.0f,
+            1.0f, -0.5f, 0.0f, 1.0f, 1.0f,
+
+            0.0f, 0.5f, 0.0f, 0.0f, 0.0f,
+            1.0f, -0.5f, 0.0f, 1.0f, 1.0f,
+            1.0f, 0.5f, 0.0f, 0.0f, 1.0f
+    };
+
+
     float transparentVertices[] = {
             // positions         // texture Coords (swapped y coordinates because texture is flipped upside down)
             0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
@@ -409,10 +429,25 @@ int main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
+    //sun
+    unsigned int sunVAO, sunVBO;
+    glGenVertexArrays(1, &sunVAO);
+    glGenBuffers(1, &sunVBO);
+    glBindBuffer(GL_ARRAY_BUFFER, sunVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(sunVertices), sunVertices, GL_STATIC_DRAW);
+    glBindVertexArray(sunVAO);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1,2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    glBindVertexArray(0);
+
+
 
     unsigned int stoneTexture = loadTexture("resources/textures/stone.JPG");
     unsigned int faceTexture = loadTexture("resources/textures/coral.jpg");
     unsigned int algaeTexture = loadTexture("resources/textures/algae.png");
+    unsigned int sunTexture = loadTexture("resources/textures/sun.png");
 
     // transparent vegetation locations
     vector<glm::vec3> vegetation
@@ -438,23 +473,26 @@ int main() {
     faceShader.use();
     faceShader.setInt("texture1", 0);
 
+    sunShader.use();
+    sunShader.setInt("texture1", 0);
+
     // load models
     // -----------
-    Model ourModel("resources/objects/Boat2/11806_boat_v1_L3.obj");
-    Model fishModel("resources/objects/Fish/12265_Fish_v1_L2.obj");
-    Model starModel("resources/objects/1/11793_pendant_v2_L3.obj");
+    Model ourModel(FileSystem::getPath("resources/objects/Boat2/11806_boat_v1_L3.obj"));
+    Model fishModel(FileSystem::getPath("resources/objects/Fish/12265_Fish_v1_L2.obj"));
+    Model starModel(FileSystem::getPath("resources/objects/1/11793_pendant_v2_L3.obj"));
 
     ourModel.SetShaderTextureNamePrefix("material.");
 
 
     vector<std::string> faces
             {
-                    "resources/textures/sky/skyrender0001.bmp",
-                    "resources/textures/sky/skyrender0004.bmp",
-                    "resources/textures/sky/skyrender0003.bmp",
-                    "resources/textures/sky/skyrender0006.bmp",
-                    "resources/textures/sky/skyrender0002.bmp",
-                    "resources/textures/sky/skyrender0005.bmp"
+                    FileSystem::getPath("resources/textures/sky/skyrender0001.bmp"),
+                    FileSystem::getPath("resources/textures/sky/skyrender0004.bmp"),
+                    FileSystem::getPath("resources/textures/sky/skyrender0003.bmp"),
+                    FileSystem::getPath ("resources/textures/sky/skyrender0006.bmp"),
+                    FileSystem::getPath ("resources/textures/sky/skyrender0002.bmp"),
+                    FileSystem::getPath("resources/textures/sky/skyrender0005.bmp")
             };
 
     unsigned int cubemapTexture = loadCubemap(faces);
@@ -486,7 +524,7 @@ int main() {
         lastFrame = currentFrame;
 
         // input
-         processInput(window);
+        processInput(window);
 
 
         // render
@@ -495,7 +533,7 @@ int main() {
 
         // don't forget to enable shader before setting uniforms
         ourShader.use();
-        pointLight.position = glm::vec3(4.0 * cos(0.9), 4.0f, 4.0 * sin(0.9));
+        pointLight.position = glm::vec3(0.1 * cos(0.9), 0.1, 0.1 * sin(0.9));
         ourShader.setVec3("pointLight.position", pointLight.position);
         ourShader.setVec3("pointLight.ambient", pointLight.ambient);
         ourShader.setVec3("pointLight.diffuse", pointLight.diffuse);
@@ -505,6 +543,9 @@ int main() {
         ourShader.setFloat("pointLight.quadratic", pointLight.quadratic);
         ourShader.setVec3("viewPosition", programState->camera.Position);
         ourShader.setFloat("material.shininess", 32.0f);
+
+
+
         // view/projection transformations
         glm::mat4 projection = glm::perspective(glm::radians(programState->camera.Zoom),
                                                 (float) SCR_WIDTH / (float) SCR_HEIGHT, 0.1f, 100.0f);
@@ -512,11 +553,15 @@ int main() {
         ourShader.setMat4("projection", projection);
         ourShader.setMat4("view", view);
 
+        ourShader.setVec3("viewPos", programState->camera.Position);
+        ourShader.setInt("blinn", blinn);
 
         glm::mat4 model = glm::mat4(1.0f);
-        model = glm::translate(model, glm::vec3(0.0f, 0.0f, 1.0f));
+        model = glm::translate(model, programState->boatPosition);
+        model = glm::scale(model, glm::vec3(programState->boatScale));
+        //model = glm::translate(model, glm::vec3(0.0f, 0.0f, 1.0f));
         model = glm::rotate(model, glm::radians(94.7f),glm::vec3(-3.0f,1.1f, 1.6f));
-        model = glm::scale(model, glm::vec3(0.001f, 0.001f, 0.001f));
+        //model = glm::scale(model, glm::vec3(0.001f, 0.001f, 0.001f));
         ourShader.setMat4("model", model);
         ourModel.Draw(ourShader);
 
@@ -580,8 +625,6 @@ int main() {
         glBindVertexArray(0);
         glEnable(GL_CULL_FACE);
 
-        if (programState->ImGuiEnabled)
-            DrawImGui(programState);
 
 
         glDepthFunc(GL_LEQUAL); //change depth function so depth test passes when values are equal to depth buffer's content
@@ -609,7 +652,7 @@ int main() {
 
 
         //draw fishes
-        for(int i=0; i < 6; i++) {
+        for(int i=0; i < programState->numOfFish; i++) {
             glm::vec3 positions = fishPositions[i];
             float x = positions[0];
             float y = positions[1];
@@ -632,12 +675,34 @@ int main() {
         starShader.setInt("blinn", blinn);
 
         glm::mat4 modelStar = glm::mat4(1.0f);
-        modelStar = glm::translate(modelStar, glm::vec3(-0.9f, -4.0f, -6.1f));
-        modelStar = glm::scale(modelStar, glm::vec3(0.1f, 0.1f, 0.1f));
+        modelStar = glm::translate(modelStar, programState->starPosition);
+        modelStar = glm::scale(modelStar, glm::vec3(programState->starScale));
+        //modelStar = glm::translate(modelStar, glm::vec3(-0.9f, -4.0f, -6.1f));
+        // modelStar = glm::scale(modelStar, glm::vec3(0.1f, 0.1f, 0.1f));
         starShader.setMat4("model", modelStar);
         starModel.Draw(starShader);
 
+        //sun
+        sunShader.use();
+        sunShader.setMat4("projection", projection);
+        sunShader.setMat4("view", view);
 
+        glBindVertexArray(sunVAO);
+        glBindTexture(GL_TEXTURE_2D, sunTexture);
+
+        glm::mat4 sunModel = glm::mat4 (1.0f);
+        sunModel = glm::translate(sunModel, glm::vec3(-1.8f, 1.6f, -4.0f));
+        // sunModel = glm::translate(sunModel, glm::vec3(-1.5f, 1.3f, -4.8f));
+        sunModel = glm::rotate(sunModel, (float) glm::radians(105.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+        sunModel = glm::rotate(sunModel, (float) glm::radians(-10.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+        // sunModel = glm::scale(sunModel, glm::vec3(0.3f, 0.3f, 0.3f));
+        sunModel = glm::scale(sunModel, glm::vec3(0.2f, 0.2f, 0.2f));
+        sunShader.setMat4("model", sunModel);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
+
+        if (programState->ImGuiEnabled)
+            DrawImGui(programState);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         // -------------------------------------------------------------------------------
@@ -650,8 +715,7 @@ int main() {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-    // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
+
 
     glDeleteBuffers(1, &skyboxVAO);
     glDeleteBuffers(1, &skyboxVBO);
@@ -659,6 +723,11 @@ int main() {
     glDeleteBuffers(1, &stoneVAO);
     glDeleteBuffers(1, &stoneVBO);
 
+    glDeleteVertexArrays(1, &transparentVAO);
+    glDeleteBuffers(1, &transparentVBO);
+
+    // glfw: terminate, clearing all previously allocated GLFW resources.
+    // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
 }
@@ -724,8 +793,8 @@ void DrawImGui(ProgramState *programState) {
         ImGui::Text("Hello text");
         ImGui::SliderFloat("Float slider", &f, 0.0, 1.0);
         ImGui::ColorEdit3("Background color", (float *) &programState->clearColor);
-        ImGui::DragFloat3("Backpack position", (float*)&programState->modelPosition);
-        ImGui::DragFloat("Backpack scale", &programState->modelScale, 0.05, 0.1, 4.0);
+        ImGui::DragFloat3("Boat position", (float*)&programState->boatPosition);
+        ImGui::DragFloat("Boat scale", &programState->boatScale, 0.05, 0.1, 4.0);
 
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
