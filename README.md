@@ -12,13 +12,19 @@ https://github.com/matf-racunarska-grafika/project_base.
 4. `ALT`+`SHIFT`+`F10` -> project_base -> run
 5. Za kretanje kamere `W` `A` `S` `D`
 6. `F1` -> otvara  GUI
-7. `B` -> se ukljucuje i iskljucuje Blinn-Phong osvetljenje
+7. `P` -> se ukljucuje i iskljucuje Blinn-Phong osvetljenje
+8. `B` -> ukljucuje i iskljucuje Bloom
+
 
 
 # Implementirano
 
 - Kategorija A:
     - [x] Cubemaps
+- Kategorija B:
+  - [x] HDR
+  - [x] Bloom
+
 
 # Autor
 
