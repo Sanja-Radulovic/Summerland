@@ -2,11 +2,13 @@
 
 Projekat rađen za potrebe kursa računarska grafika na matematičkom fakultetu.
 Skelet projekta preuzet sa
-https://github.com/matf-racunarska-grafika/project_base.
+`https://github.com/matf-racunarska-grafika/project_base`.
+
+Demo snimak projekta: https://www.youtube.com/watch?v=QG_4juQk_BQ
 
 # Uputstva
 
-1. git clone https://github.com/Sanja-Radulovic/Summerland.git
+1. git clone `https://github.com/Sanja-Radulovic/Summerland.git`
 2. CLion -> Open -> path/to/my/project
 3. Main se nalazi u src/main.cpp
 4. `ALT`+`SHIFT`+`F10` -> project_base -> run

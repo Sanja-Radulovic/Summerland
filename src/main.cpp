@@ -71,7 +71,6 @@ struct ProgramState {
     unsigned int numOfFish = 6;
 
 
-
     bool bloom = true;
     bool bloomKeyPressed = false;
     float exposure = 1.0f;
@@ -744,8 +743,6 @@ int main() {
         glm::mat4 modelStar = glm::mat4(1.0f);
         modelStar = glm::translate(modelStar, programState->starPosition);
         modelStar = glm::scale(modelStar, glm::vec3(programState->starScale));
-        //modelStar = glm::translate(modelStar, glm::vec3(-0.9f, -4.0f, -6.1f));
-        // modelStar = glm::scale(modelStar, glm::vec3(0.1f, 0.1f, 0.1f));
         starShader.setMat4("model", modelStar);
         starModel.Draw(starShader);
 
@@ -896,6 +893,10 @@ void DrawImGui(ProgramState *programState) {
         ImGui::DragFloat("pointLight.constant", &programState->pointLight.constant, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.linear", &programState->pointLight.linear, 0.05, 0.0, 1.0);
         ImGui::DragFloat("pointLight.quadratic", &programState->pointLight.quadratic, 0.05, 0.0, 1.0);
+
+        ImGui::DragFloat("exposure", &programState->exposure);
+        ImGui::Checkbox("bloom", &programState->bloom);
+
         ImGui::End();
     }
 
